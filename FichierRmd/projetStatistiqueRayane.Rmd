@@ -1,0 +1,253 @@
+---
+title: "Evolution du ratio de victoires à domicile et à l'extérieur"
+author:
+- HADDAD Rayane
+- "El-bouch Ismail"
+- Angelica GRASIA
+- Ding Zichen
+date: "Date : 2024-03-31"
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+---
+
+
+
+### **TABLE OF CONTENTS** ###
+ 1. Introduction
+    * Dataset Description
+      - How the dataset has been obtained ?
+    * Question
+ 2. Methodology
+    * Data clean-up procedures
+    * Scientific workflow
+    * Data representation choices
+ 3. Analysis in Literate Programming
+ 4. Conclusion
+ 5. References
+
+
+
+\newpage
+## INTRODUCTION
+
+
+  * **Dataset Description**  
+       Dans l'univers compétitif du football international, la dynamique entre les matchs joués à domicile et à l'extérieur a toujours été un sujet de curiosité et d'analyse. Cette étude, vise à explorer l'impact de jouer sur son propre terrain versus en terrain adverse sur le taux de victoires, s'appuyant sur un ensemble de données exhaustif de matchs internationaux s'étalant de 1872 à 2024. Notre source principale, un fichier csv méticuleusement compilé par l'expert en compétitions “Mart Jürisoo”, regorge d'informations sur plus de 46 000 matchs, offrant une base riche pour notre enquête.
+
+ 
+    
+    
+  * **Question**  
+    La question centrale de notre étude cherche à démêler si l'avantage de jouer à domicile se reflète concrètement dans les résultats des matchs, une interrogation qui a alimenté de nombreuses discussions parmi les analystes sportifs. Grâce à une méthodologie rigoureuse comprenant le nettoyage des données, l'application de workflows scientifiques, et des choix judicieux en matière de représentation des données, nous plongeons au cœur de cette dynamique pour en extraire des insights significatifs.
+    
+
+## Methodology
+
+
+* **Data clean-up procedures**  
+    Dans les données que nous avons téléchargées, nous avons trois fichiers CSV. Nous n'avons utilisé qu'un seul d'entre eux, le fichier "resultats". Nous avons dû supprimer deux colonnes de ce fichier, à savoir "tournament" et "neutral", car nous ne les utilisons pas.
+    
+
+```{r, warning=FALSE, echo=FALSE,message=FALSE}
+# Charger la bibliothèque nécessaire
+library(tidyverse)
+library(ggplot2);
+library(tidyverse);
+library(dplyr);
+library(magrittr) ;
+```
+
+
+```{r, warning=FALSE, echo=FALSE,message=FALSE}
+# Charger les données depuis le fichier CSV
+data <- read.csv("C:/Users/rayan/Downloads/archive/results.csv", sep = ",")
+```
+
+
+* Supprimer les colonnes "tournament" et "neutral"
+* Sauvegarder le fichier CSV mis à jour
+
+
+```{r, warning=FALSE, echo=FALSE,message=FALSE}
+# Convertir la colonne date en format date si elle ne l'est pas déjà
+data$date <- as.Date(data$date)
+```
+
+
+```{r, warning=FALSE, echo=FALSE,message=FALSE}
+# Calculer le nombre total de matchs à domicile et à l'extérieur
+home_matches <- data %>% filter(!is.na(home_score)) %>% nrow()
+away_matches <- data %>% filter(!is.na(away_score)) %>% nrow()
+```
+
+
+```{r, warning=FALSE, echo=FALSE,message=FALSE}
+# Calculer le nombre de victoires à domicile et à l'extérieur
+home_wins <- data %>% filter(home_score > away_score) %>% nrow()
+away_wins <- data %>% filter(home_score < away_score) %>% nrow()
+```
+
+
+```{r, warning=FALSE, echo=FALSE,message=FALSE}
+# Calculer le ratio de victoires à domicile et à l'extérieur
+home_win_ratio <- home_wins / home_matches
+away_win_ratio <- away_wins / away_matches
+```
+
+
+```{r, warning=FALSE, echo=FALSE,message=FALSE}
+# Afficher les résultats
+cat("Ratio de victoires à domicile :", home_win_ratio, "\n")
+cat("Ratio de victoires à l'extérieur :", away_win_ratio, "\n")
+```
+
+
+```{r, warning=FALSE, echo=FALSE,message=FALSE}
+# Tracer l'évolution des ratios au fil du temps
+p1 <- data %>%
+  mutate(year = lubridate::year(date)) %>%
+  group_by(year) %>%
+  summarise(
+    home_win_ratio = sum(home_score > away_score, na.rm = TRUE) / sum(!is.na(home_score)),
+    away_win_ratio = sum(home_score < away_score, na.rm = TRUE) / sum(!is.na(away_score))
+  ) %>%
+  ggplot(aes(x = year)) +
+  geom_line(aes(y = home_win_ratio, color = "Home Win Ratio")) +
+  geom_line(aes(y = away_win_ratio, color = "Away Win Ratio")) +
+  labs(title = "Evolution du ratio de victoires à domicile et à l'extérieur",
+       x = "Année",
+       y = "Ratio de victoires",
+       color = "Type de victoire") +
+  theme_minimal()
+```
+
+  
+```{r, warning=FALSE, echo=FALSE,message=FALSE}  
+# Filtrer les données pour un seul pays (par exemple la France)
+data_france <- data %>%
+  filter(country == "France")
+```
+  
+
+```{r, warning=FALSE, echo=FALSE,message=FALSE}
+# Créer un graphique pour l'évolution du ratio de victoires à domicile et à l'extérieur pour la France bar
+p2 <- ggplot(data_france, aes(x = date)) +
+  geom_bar(aes(y = home_score / (home_score + away_score), fill = "Home Win Ratio"), stat = "identity") +
+  geom_bar(aes(y = away_score / (home_score + away_score), fill = "Away Win Ratio"), stat = "identity") +
+  labs(title = "Évolution du ratio de victoires à domicile et à l'extérieur pour la France",
+       x = "Date",
+       y = "Ratio de victoires",
+       fill = "Type de victoire") +
+  theme_minimal()
+  scale_y_continuous(limits = c(0, 1))
+```
+
+```{r, warning=FALSE, echo=FALSE,message=FALSE}
+# Créer un histogramme pour le ratio de victoires à domicile pour la France
+p3 <- ggplot(data_france, aes(x = home_score / (home_score + away_score))) +
+  geom_histogram(binwidth = 0.05, fill = "blue", color = "black", alpha = 0.5) +
+  labs(title = "Distribution du ratio de victoires à domicile pour la France",
+       x = "Ratio de victoires à domicile",
+       y = "Fréquence") +
+  theme_minimal() +
+  scale_x_continuous(limits = c(0, 1))
+```
+
+* **Remarque **
+  * Dans les graphes suivant la fréquence représente le nombre de fois qu'une certaine valeur apparaît ou tombe dans un intervalle spécifique de données
+
+
+```{r, warning=FALSE, echo=FALSE,message=FALSE}
+# Créer un histogramme pour le ratio de victoires à l'extérieur pour la France
+p4 <- ggplot(data_france, aes(x = away_score / (home_score + away_score))) +
+  geom_histogram(binwidth = 0.05, fill = "red", color = "black", alpha = 0.5) +
+  labs(title = "Distribution du ratio de victoires à l'extérieur pour la France",
+       x = "Ratio de victoires à l'extérieur",
+       y = "Fréquence") +
+  theme_minimal() +
+  scale_x_continuous(limits = c(0, 1))
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# Afficher les graphiques séparément
+print(p1)
+print(p3)
+print(p4)
+print(p2)
+```
+
+\newpage 
+ * **Description :**
+ 
+ *    Ceci est une application Shiny qui permet à l'utilisateur de sélectionner une équipe de football, puis affiche le ratio de victoires de cette équipe à domicile et à l'extérieur sous forme de graphique à barres,qui peut être utile pour l'analyse des performances de l'équipe dans différents contextes de match . 
+ 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(shiny)
+
+# Définir l'interface utilisateur
+ui <- fluidPage(
+  titlePanel("Ratio de victoires à domicile et à l'extérieur"),
+  sidebarLayout(
+    sidebarPanel(
+      selectInput("team", "Sélectionnez une équipe :", choices = unique(c(data$home_team, data$away_team)))
+    ),
+    mainPanel(
+      plotOutput("team_plot")
+    )
+  )
+)
+
+# Définir la fonction de calcul et de traçage
+server <- function(input, output) {
+  # Fonction pour calculer le ratio de victoires à domicile et à l'extérieur pour une équipe donnée
+  team_ratio <- reactive({
+    team_data <- data %>%
+      filter(home_team == input$team | away_team == input$team) %>%
+      mutate(
+        is_home = ifelse(home_team == input$team, 1, 0),
+        is_away = ifelse(away_team == input$team, 1, 0),
+        win = ifelse((home_team == input$team & home_score > away_score) | 
+                       (away_team == input$team & away_score > home_score), 1, 0)
+      )
+    home_ratio <- sum(team_data$is_home & team_data$win) / sum(team_data$is_home)
+    away_ratio <- sum(team_data$is_away & team_data$win) / sum(team_data$is_away)
+    return(c(home_ratio, away_ratio))
+  })
+  
+  # Tracer le graphique
+  output$team_plot <- renderPlot({
+    ratio <- team_ratio()
+    barplot(ratio, names.arg = c("À domicile", "À l'extérieur"), col = c("blue", "green"),
+            main = paste("Ratio de victoires pour l'équipe", input$team),
+            ylab = "Ratio de victoires", ylim = c(0, 1))
+  })
+}
+
+# Lancer l'application Shiny
+shinyApp(ui = ui, server = server)
+```
+
+
+##    Conclusion 
+  * Au terme de notre exploration approfondie des victoires à domicile et à l'extérieur dans le contexte des matchs de football international, nos analyses révèlent une tendance fascinante : jouer à domicile offre un avantage substantiel, une constante qui s'est affirmée au fil des décennies. Cette conclusion vient appuyer l'hypothèse selon laquelle l'environnement familier, le soutien du public local, et l'absence de fatigue liée au voyage contribuent significativement à la performance des équipes.
+
+* Il est également intéressant de noter que, bien que l'avantage à domicile soit un phénomène bien documenté, l'évolution de cet avantage au fil du temps offre des perspectives uniques sur la manière dont les aspects sociaux, culturels et technologiques influencent le sport. En effet, notre étude montre que malgré les variations annuelles, l'avantage de jouer à domicile reste une force constante dans le football international.
+
+* Nos découvertes offrent des implications précieuses pour les entraîneurs, les joueurs, et les analystes sportifs, soulignant l'importance de stratégies adaptées pour maximiser cet avantage ou pour le contrer lors des matchs à l'extérieur. Alors que notre étude se concentre sur le football, les méthodologies et insights gagnés ici peuvent s'appliquer à d'autres sports, ouvrant des voies pour des recherches futures.
+
+* Enfin, Nous espérons que nos travaux inspireront d'autres recherches dans le domaine du sport et au-delà, continuant à enrichir notre compréhension des dynamiques de compétition.
+
+
+##    Referances
+  
+  * data : https://www.kaggle.com/datasets/martj42/international-football-results-from-1872-to-2017
+  * commande R : https://chesneau.users.lmno.cnrs.fr/RCarte_Commandes-R.pdf 
+  * R shinny : https://shiny.posit.co/r/getstarted/shiny-basics/lesson1/index.html
+  
+     
+
